@@ -22,6 +22,7 @@ import NetworkDeepDive from './components/NetworkDeepDive';
 import PulseView from './components/PulseView';
 import ArenaView from './components/ArenaView';
 import ModelLabs from './components/ModelLabs';
+import ModelEnsembleVisualizer from './components/ModelEnsembleVisualizer';
 
 // Dashboard Layout Shell
 function DashboardLayout() {
@@ -105,7 +106,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          
+
           {/* DASHBOARD ROUTES */}
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<UnifiedOverview />} />
