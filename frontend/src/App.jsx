@@ -75,7 +75,7 @@ function UnifiedOverview() {
         </div>
 
         {/* SECTION B1-B3: INTEGRATED INTELLIGENCE (Col 12) */}
-        <div className="lg:col-span-12 h-[420px]">
+        <div className="lg:col-span-12">
           <ExplainabilityGrid />
         </div>
       </div>

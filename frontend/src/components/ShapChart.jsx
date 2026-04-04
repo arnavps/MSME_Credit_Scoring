@@ -24,8 +24,8 @@ const ShapChart = ({ shap }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <div className="w-full h-[220px]">
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full h-full">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
           Model Drivers // SHAP Waterfall
         </h3>
@@ -34,7 +34,7 @@ const ShapChart = ({ shap }) => {
         </span>
       </div>
 
-      <ResponsiveContainer width="100%" height={160}>
+      <ResponsiveContainer width="100%" height="85%">
         <BarChart
           data={chartData}
           layout="vertical"

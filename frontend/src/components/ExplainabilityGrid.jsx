@@ -107,40 +107,34 @@ const ExplainabilityGrid = memo(() => {
          </div>
 
          {/* Main Content: SHAP + Ollama Side by Side */}
-         <div className="h-[320px] grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* LEFT: SHAP Model Drivers (Model Explainability) */}
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LEFT: Top 5 Reasons + SHAP */}
             <div className="flex flex-col h-full">
-               <div className="flex items-center gap-2 mb-3">
-                  <BarChart3 className="text-emerald-500" size={18} />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Model Drivers // SHAP Explainability</span>
-               </div>
-               <div className="h-[140px] bg-slate-50/50 rounded-xl border border-slate-100 p-4 mb-3">
-                  <ShapChart shap={shapData} />
-               </div>
-
-               {/* Top 5 Reasons - Always Visible */}
-               <div className="flex-1 p-4 rounded-xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                     <div className="w-5 h-5 rounded bg-emerald-100 flex items-center justify-center">
-                        <span className="text-[10px] font-black text-emerald-600">5</span>
+               {/* Top 5 Reasons - PROMINENT at top */}
+               <div className="mb-4 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                     <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center">
+                        <span className="text-[11px] font-black text-white">5</span>
                      </div>
-                     <span className="text-[11px] font-black text-slate-600 uppercase tracking-wider">
-                        Score Drivers
-                     </span>
+                     <span className="text-[12px] font-black text-slate-700 uppercase tracking-wider">Score Drivers</span>
                   </div>
                   <div className="space-y-2">
-                     {topFiveReasons.map((reason, i) => {
+                     {topFiveReasons.slice(0, 5).map((reason, i) => {
                         const isPositive = reason.includes('(+)') || reason.includes('Strength');
                         const isNegative = reason.includes('(-)') || reason.includes('CRITICAL');
                         return (
-                           <div key={i} className="flex items-start gap-3 py-1.5">
-                              <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${isPositive ? 'bg-emerald-500' : isNegative ? 'bg-red-500' : 'bg-slate-400'
-                                 }`} />
-                              <span className="text-[13px] font-medium text-slate-700 leading-snug">{reason}</span>
+                           <div key={i} className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-500' : isNegative ? 'bg-red-500' : 'bg-slate-400'}`} />
+                              <span className="text-[13px] font-medium text-slate-700">{reason}</span>
                            </div>
                         );
                      })}
                   </div>
+               </div>
+
+               {/* SHAP Chart - below */}
+               <div className="h-[280px] bg-slate-50 rounded-xl border border-slate-100 p-4">
+                  <ShapChart shap={shapData} />
                </div>
             </div>
 

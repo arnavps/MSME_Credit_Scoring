@@ -11,7 +11,7 @@ def clean_and_inject(source="data/msme_synthetic_3000.csv", target="data/msme_sy
         ["06FLTPW4322DZ1V", "Apex Precision Engineering", "Manufacturing", "HEALTHY", "0.85", "4500000.0", "3200000.0", "1.2", "1.0", "0.02", "0.12", "0.15", "0.98", "0", "785.0", "0.28", "0.0", "0", "0"],
         ["09YYYPM8725QZ1V", "Modern Textiles & Fabrics", "Manufacturing", "STRESSED", "0.45", "1200000.0", "1100000.0", "18.5", "0.65", "0.22", "-0.28", "0.45", "0.72", "0", "612.0", "0.08", "0.0", "1", "0"],
         ["27AAPFU0939F1ZV", "Healthy Retailer", "Retail", "HEALTHY", "0.92", "6500000.0", "4200000.0", "0.5", "1.0", "0.01", "0.15", "0.08", "0.99", "0", "810.0", "0.32", "0.0", "0", "0"],
-        ["29OBQFV0902E1Z4", "Healthy Grower", "Wholesale", "HEALTHY_GROWER", "0.89", "8500000.0", "5200000.0", "2.1", "1.0", "0.03", "0.18", "0.12", "0.95", "0", "806.0", "0.25", "0.0", "0", "0"]
+        ["13FRAUD9999Z1Z1", "Shadow Shell Enterprises", "Wholesale", "FRAUD", "0.15", "9500000.0", "9400000.0", "0.1", "1.0", "0.01", "0.95", "0.92", "0.15", "1", "410.0", "0.02", "2.5", "1", "1"]
     ]
     
     header = "gstin,business_name,sector,profile,scenario_resilience_lp,output_gst,input_gst,avg_days_late,filing_compliance_rate,upi_bounce_rate,txn_velocity_mom,buyer_concentration_index,collection_efficiency,circular_transaction_flag,promoter_cibil,gross_margin_proxy,avg_round_trip_hours,is_default,is_fraud"
