@@ -31,33 +31,33 @@ async def lifespan(app: FastAPI):
     Also starts the live data simulator background task.
     """
     print("\n" + "="*50)
-    print("🚀 CREDNEXIS SYSTEM HEALTH REPORT")
+    print(">>> CREDNEXIS SYSTEM HEALTH REPORT")
     print("="*50)
     
     # 1. Load ML Artifacts
     try:
         predictor.load_artifacts()
-        print("✅ ML Persistence: LGBM, XGB, CatBoost, IF, RF [LOADED]")
+        print("[OK] ML Persistence: LGBM, XGB, CatBoost, IF, RF [LOADED]")
     except Exception as e:
-        print(f"❌ ML Persistence: ERROR - {e}")
+        print(f"[ERR] ML Persistence: ERROR - {e}")
 
     # 2. Mount Graph Topology
     try:
         # Re-init in case file path changed
-        print("✅ Fraud Engine: NetworkX DiGraph Topology [MOUNTED]")
+        print("[OK] Fraud Engine: NetworkX DiGraph Topology [MOUNTED]")
     except Exception as e:
-        print(f"❌ Fraud Engine: ERROR - {e}")
+        print(f"[ERR] Fraud Engine: ERROR - {e}")
 
     # 3. Cache Database
     global msme_db
     try:
         msme_db = read_msme_csv(MSME_DATA_CSV)
-        print(f"✅ Data Core: {len(msme_db)} MSME records cached in memory")
+        print(f"[OK] Data Core: {len(msme_db)} MSME records cached in memory")
     except Exception as e:
-        print(f"❌ Data Core: ERROR - {e}")
+        print(f"[ERR] Data Core: ERROR - {e}")
 
     # 4. Initialize LLM Service
-    print("✅ Advisory: Local Ollama (llama3) [READY]")
+    print("[OK] Advisory: Local Ollama (llama3) [READY]")
 
     print("="*50 + "\n")
 
@@ -445,7 +445,7 @@ async def get_arena_bids(gstin: str):
 async def get_dashboard_data(gstin: str):
     """
     Unified Dashboard State:
-    Provides a single source of truth for all dashboard modules.
+    Provides a single source of truth for all dashboard modules including AI Advisory.
     """
     # 1. Fetch record
     record = get_msme_record(gstin)
@@ -454,7 +454,30 @@ async def get_dashboard_data(gstin: str):
     intel = predictor.predict_credit_intelligence(record)
     fraud_metrics = fraud_engine.get_circularity_metrics(gstin)
     
-    # 3. Synchronize High Risk Nodes
+    # 3. AI Advisory Generation
+    # Extract Sentinel Signals for LLM Context
+    sentinel_report = sentinel.get_ews_report(record, fraud_metrics)
+    sentinel_signals = [s["name"] for s in sentinel_report if s["severity"] in ["HIGH", "CRITICAL"]]
+    
+    advisory_data = await llm_service.generate_advisory_structured(
+        score=intel["credit_score"],
+        shap_reasons=intel["top_reasons"],
+        sentinel_signals=sentinel_signals
+    )
+    
+    # 4. Reason Categorization
+    pos_reasons = [r.replace("(+) ", "").replace("Strength: ", "") for r in intel["top_reasons"] if r.startswith("(+)")]
+    neg_reasons = [r.replace("(-) ", "").replace("High Risk Flag: ", "") for r in intel["top_reasons"] if r.startswith("(-)")]
+    
+    # Add circular transaction note to positive reasons if clean
+    if not fraud_metrics["is_circular"] and "No circular transactions detected" not in pos_reasons:
+        pos_reasons.append("No circular transactions detected")
+    
+    # Add fraud alert to negative if exists
+    if fraud_metrics["is_circular"] and "Abnormal circular flow detected" not in neg_reasons:
+        neg_reasons.insert(0, "Abnormal circular flow detected (!)")
+    
+    # 5. Synchronize High Risk Nodes
     # Derived from circular_transaction_flag
     circular_nodes = []
     if record.get("circular_transaction_flag") == 1:
@@ -495,6 +518,11 @@ async def get_dashboard_data(gstin: str):
             "gst": gst_vel,
             "eway": eway_vel
         },
+        "top_5_reasons": {
+            "positive": pos_reasons[:5],
+            "negative": neg_reasons[:5]
+        },
+        "advisory": advisory_data,
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 

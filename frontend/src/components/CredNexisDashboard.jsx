@@ -16,6 +16,7 @@ import { useDashboard } from '../context/DashboardContext';
 import ShapChart from './ShapChart';
 import Alerts from './Alerts';
 import AmnestyBadge from './AmnestyBadge';
+import TopReasons from './TopReasons';
 
 // Royal Blue Accent
 const ROYAL_BLUE = '#4338CA';
@@ -234,10 +235,16 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
           </div>
         </div>
 
-        {/* BOTTOM CENTER: Ollama Intelligence */}
-        <div className="col-span-7">
+        {/* BOTTOM CENTER: Intelligence Hub (SHAP + Ollama) */}
+        <div className="col-span-7 flex flex-col gap-6">
+          {/* 1. Behavioral Drivers (SHAP) */}
+          <div style={glassCard}>
+            <TopReasons reasons={data?.top_5_reasons} />
+          </div>
+
+          {/* 2. AI Reasoning (Ollama) */}
           <div
-            className="h-full rounded-2xl p-6 text-white relative overflow-hidden"
+            className="flex-1 rounded-2xl p-6 text-white relative overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%)',
               borderRadius: '16px',
