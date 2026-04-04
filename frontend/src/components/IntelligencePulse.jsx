@@ -2,7 +2,6 @@ import React, { memo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ShieldCheck, Activity, Search, Sparkles, ChevronDown, ChevronUp, Scale } from 'lucide-react';
 import { useDashboard } from '../context/DashboardContext';
-import AmnestyBadge from './AmnestyBadge';
 import AmnestyForensicTraceCard from './AmnestyForensicTraceCard';
 import ScoreAuditTrail from './ScoreAuditTrail';
 
@@ -145,7 +144,6 @@ const IntelligencePulse = memo(() => {
                   {score}
                 </span>
                 <span className="text-[11px] font-black text-royal uppercase tracking-widest mt-2">{riskBand}</span>
-                <AmnestyBadge boost={amnesty.boost} isApplied={amnesty.applied} />
               </div>
             </div>
 

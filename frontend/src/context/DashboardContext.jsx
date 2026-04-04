@@ -267,10 +267,11 @@ export const DashboardProvider = ({ children }) => {
 
   // Observer for GSTIN Input Field changes (Immediate Reset)
   useEffect(() => {
-    if (activeGstin && view === 'landing') {
+    if (activeGstin) {
+      // Always fetch fresh data when GSTIN changes
       fetchScoreData(activeGstin, true, true);
     }
-  }, [activeGstin, view]);
+  }, [activeGstin, fetchScoreData]);
 
   const login = useCallback((credentials) => {
     setIsAuthenticated(true);
