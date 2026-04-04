@@ -72,7 +72,7 @@ setInterval(() => {
   io.emit('update', data);
   // console.log(`📊 Pushed: ${data.score} (F: ${features.txn_density.toFixed(2)})`);
 
-}, 2000);
+}, 600000);
 
 // REST endpoint for spec compliance (Page 14)
 app.get('/api/status', (req, res) => {

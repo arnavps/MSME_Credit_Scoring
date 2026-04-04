@@ -489,3 +489,227 @@ async def get_dashboard_data(gstin: str):
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
+
+# ============================================================================
+# SCORE AUDIT TRAIL ENDPOINTS - For Judicial Traceability
+# ============================================================================
+
+from src.score_audit_logger import audit_logger, DataSourceType
+
+@app.get("/api/v1/risk/{gstin}/score-history")
+async def get_score_history(
+    gstin: str,
+    limit: int = 50,
+    source_type: str = None
+):
+    """
+    Get complete score change history for a GSTIN.
+    Shows exactly which transactions caused score changes.
+    """
+    try:
+        # Validate GSTIN exists
+        get_msme_record(gstin)
+        
+        # Parse source filter if provided
+        source_filter = None
+        if source_type:
+            try:
+                source_filter = DataSourceType(source_type)
+            except ValueError:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Invalid source_type. Valid options: {[e.value for e in DataSourceType]}"}
+                )
+        
+        # Get history
+        events = audit_logger.get_score_history(gstin, limit=limit, source_filter=source_filter)
+        
+        return {
+            "gstin": gstin,
+            "total_events": len(events),
+            "events": [e.to_dict() for e in events]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve score history: {str(e)}"}
+        )
+
+
+@app.get("/api/v1/risk/{gstin}/score-deltas")
+async def get_score_deltas(
+    gstin: str,
+    start_date: str = None,
+    end_date: str = None
+):
+    """
+    Get aggregated score delta statistics for judicial review.
+    Shows volatility patterns and change sources.
+    """
+    try:
+        # Validate GSTIN exists
+        get_msme_record(gstin)
+        
+        # Get delta analysis
+        deltas = audit_logger.get_score_deltas(gstin, start_date, end_date)
+        
+        return deltas
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve score deltas: {str(e)}"}
+        )
+
+
+@app.get("/api/v1/risk/{gstin}/feature-impact")
+async def get_feature_impact(
+    gstin: str,
+    feature: str,
+    limit: int = 100
+):
+    """
+    Get detailed analysis of how a specific feature has impacted scores.
+    Example: Show every time 'upi_bounce_rate' caused a score drop.
+    """
+    try:
+        # Validate GSTIN exists
+        get_msme_record(gstin)
+        
+        # Validate feature name
+        valid_features = [
+            "avg_days_late", "upi_bounce_rate", "filing_compliance_rate",
+            "promoter_cibil", "gross_margin_proxy", "txn_velocity_mom",
+            "buyer_concentration_index", "collection_efficiency"
+        ]
+        
+        if feature not in valid_features:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": f"Invalid feature. Valid options: {valid_features}",
+                    "suggestion": "Feature names must match the ML model features"
+                }
+            )
+        
+        # Get impact analysis
+        impact = audit_logger.get_feature_impact_analysis(gstin, feature, limit)
+        
+        return impact
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve feature impact: {str(e)}"}
+        )
+
+
+@app.get("/api/v1/risk/{gstin}/score-report")
+async def get_judicial_score_report(
+    gstin: str,
+    start_date: str = None,
+    end_date: str = None
+):
+    """
+    Generate comprehensive judicial report showing all score changes
+    with evidence references for court proceedings.
+    
+    This is the primary endpoint for answering judicial questions like:
+    - "Why did the reliability score change?"
+    - "Which specific transaction caused this score drop?"
+    - "Show me the GST filing that affected the score"
+    """
+    try:
+        # Validate GSTIN exists
+        get_msme_record(gstin)
+        
+        # Generate judicial report
+        report = audit_logger.generate_judicial_report(gstin, start_date, end_date)
+        
+        # Add current score context
+        record = get_msme_record(gstin)
+        intel = predictor.predict_credit_intelligence(record)
+        
+        report["current_state"] = {
+            "credit_score": intel["credit_score"],
+            "risk_band": intel["risk_band"],
+            "cmr_equivalent": intel["cmr_equivalent"],
+            "reliability_status": "Reliable"  # From CV score
+        }
+        
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to generate judicial report: {str(e)}"}
+        )
+
+
+@app.post("/api/v1/risk/{gstin}/log-score-change")
+async def manual_score_change_log(
+    gstin: str,
+    request: Request
+):
+    """
+    Manually log a score change event (for testing or external integrations).
+    This allows external systems to inject score change events into the audit trail.
+    """
+    try:
+        # Validate GSTIN exists
+        get_msme_record(gstin)
+        
+        body = await request.json()
+        
+        # Required fields
+        required = ["previous_score", "new_score", "source_type", "source_id", "source_description"]
+        missing = [f for f in required if f not in body]
+        if missing:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Missing required fields: {missing}"}
+            )
+        
+        # Parse source type
+        try:
+            source_type = DataSourceType(body["source_type"])
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid source_type. Valid options: {[e.value for e in DataSourceType]}"}
+            )
+        
+        # Log the change
+        record = get_msme_record(gstin)
+        result = predictor.track_score_change(
+            gstin=gstin,
+            previous_score=body["previous_score"],
+            new_score=body["new_score"],
+            record=record,
+            source_type=source_type,
+            source_id=body["source_id"],
+            source_description=body["source_description"],
+            affected_features=body.get("affected_features", {}),
+            feature_deltas=body.get("feature_deltas", {}),
+            risk_band=body.get("risk_band", "MEDIUM"),
+            reliability_status=body.get("reliability_status", "Reliable")
+        )
+        
+        return {
+            "status": "success",
+            "message": "Score change logged successfully",
+            "event": result
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to log score change: {str(e)}"}
+        )
+

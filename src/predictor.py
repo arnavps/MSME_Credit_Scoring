@@ -8,6 +8,9 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
+# Import audit logger for judicial traceability
+from src.score_audit_logger import audit_logger, DataSourceType
+
 class UnifiedPredictor:
     def __init__(self, models_dir: str = "models"):
         self.models_dir = models_dir
@@ -88,6 +91,55 @@ class UnifiedPredictor:
         if score >= 500: return "CMR-8"
         if score >= 400: return "CMR-9"
         return "CMR-10"
+
+    def track_score_change(
+        self,
+        gstin: str,
+        previous_score: int,
+        new_score: int,
+        record: dict,
+        source_type: DataSourceType,
+        source_id: str,
+        source_description: str,
+        affected_features: Dict[str, Any],
+        feature_deltas: Dict[str, float],
+        risk_band: str,
+        reliability_status: str = "Reliable"
+    ) -> Dict[str, Any]:
+        """
+        Track a score change with full audit logging for judicial traceability.
+        This method logs exactly which transaction caused the score to change.
+        """
+        # Build raw evidence from the record
+        raw_evidence = {
+            "gstin": gstin,
+            "timestamp": time.time(),
+            "features": {k: v for k, v in record.items() if k not in ['gstin', 'business_name']},
+            "score_before": previous_score,
+            "score_after": new_score
+        }
+        
+        # Log the score change event
+        event = audit_logger.log_score_change(
+            gstin=gstin,
+            previous_score=previous_score,
+            new_score=new_score,
+            source_type=source_type,
+            source_id=source_id,
+            source_description=source_description,
+            affected_features=affected_features,
+            feature_deltas=feature_deltas,
+            reliability_status=reliability_status,
+            risk_band=risk_band,
+            raw_evidence=raw_evidence,
+            evidence_reference=f"data/audit_logs/{gstin}_raw.json"
+        )
+        
+        return {
+            "logged": True,
+            "event_id": f"{gstin}_{event.timestamp}",
+            "audit_file": audit_logger._get_audit_file(gstin)
+        }
 
     def predict_credit_intelligence(self, record: dict, apply_amnesty: bool = True) -> Dict[str, Any]:
         """CORE COORDINATION LOGIC: Executes our 5-model sequence with SHAP, Sector, and Amnesty adjustments."""

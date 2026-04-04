@@ -1,13 +1,25 @@
 import React, { memo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ShieldCheck, Activity, Search, Sparkles } from 'lucide-react';
+import { ShieldCheck, Activity, Search, Sparkles, ChevronDown, ChevronUp, Scale } from 'lucide-react';
 import { useDashboard } from '../context/DashboardContext';
 import AmnestyBadge from './AmnestyBadge';
 import AmnestyForensicTraceCard from './AmnestyForensicTraceCard';
+import ScoreAuditTrail from './ScoreAuditTrail';
 
 const IntelligencePulse = memo(() => {
   const { data, liveData, loading, fetchAmnestyPreview, activeGstin } = useDashboard();
   const [showForensics, setShowForensics] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+
+  const historicalRanges = [
+    { month: 'M1', range: '230 - 490' },
+    { month: 'M2', range: '250 - 510' },
+    { month: 'M3', range: '280 - 550' },
+    { month: 'M4', range: '310 - 590' },
+    { month: 'M5', range: '380 - 640' },
+    { month: 'M6', range: '420 - 660' },
+  ];
 
   useEffect(() => {
     if (showForensics && activeGstin) {
@@ -46,26 +58,55 @@ const IntelligencePulse = memo(() => {
           <h3 className="text-lg font-black text-slate-800 tracking-tighter">Reliability Index</h3>
         </div>
         
-        {/* Forensic Toggle */}
-        <button 
-          onClick={() => setShowForensics(!showForensics)}
-          className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
-            ${showForensics 
-              ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black' 
-              : 'bg-white border-slate-100 text-slate-400 hover:border-royal/30'
-            }
-          `}
-        >
-          {showForensics ? <Sparkles size={14} /> : <Search size={14} />}
-          <span className="text-[10px] uppercase tracking-widest">
-            {showForensics ? 'Active Trace' : 'Forensic Trace'}
-          </span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Score Audit Trail Toggle */}
+          <button 
+            onClick={() => {
+              setShowAuditTrail(!showAuditTrail);
+              setShowForensics(false);
+            }}
+            className={`
+              flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
+              ${showAuditTrail 
+                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black' 
+                : 'bg-white border-slate-100 text-slate-400 hover:border-royal/30'
+              }
+            `}
+          >
+            <Scale size={14} />
+            <span className="text-[10px] uppercase tracking-widest">
+              {showAuditTrail ? 'Audit Active' : 'Score Audit'}
+            </span>
+          </button>
+          
+          {/* Forensic Toggle */}
+          <button 
+            onClick={() => {
+              setShowForensics(!showForensics);
+              setShowAuditTrail(false);
+            }}
+            className={`
+              flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
+              ${showForensics 
+                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black' 
+                : 'bg-white border-slate-100 text-slate-400 hover:border-royal/30'
+              }
+            `}
+          >
+            {showForensics ? <Sparkles size={14} /> : <Search size={14} />}
+            <span className="text-[10px] uppercase tracking-widest">
+              {showForensics ? 'Active Trace' : 'Forensic Trace'}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10">
-        {showForensics ? (
+        {showAuditTrail ? (
+          <div className="w-full h-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-y-auto">
+            <ScoreAuditTrail gstin={activeGstin} />
+          </div>
+        ) : showForensics ? (
           <div className="w-full h-full animate-in fade-in slide-in-from-right-4 duration-500">
             <AmnestyForensicTraceCard />
           </div>
@@ -106,16 +147,39 @@ const IntelligencePulse = memo(() => {
             </div>
 
             {/* Range Labels */}
-            <div className="w-48 flex justify-between mt-2 px-4">
+            <div className="w-48 flex justify-between mt-2 px-4 mb-2">
               <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">300</span>
               <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">900</span>
+            </div>
+
+            {/* Historical Ranges Dropdown */}
+            <div className="w-full px-4 mt-2">
+              <button 
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors"
+                aria-expanded={showHistory}
+              >
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Historical Ranges (M1-M6)</span>
+                {showHistory ? <ChevronUp size={14} className="text-slate-500"/> : <ChevronDown size={14} className="text-slate-500" />}
+              </button>
+              
+              {showHistory && (
+                <div className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-x-6 gap-y-2 animate-in fade-in slide-in-from-top-1">
+                  {historicalRanges.map(h => (
+                    <div key={h.month} className="flex justify-between items-center text-[10px] border-b border-slate-200/50 pb-1">
+                      <span className="font-bold text-slate-500">{h.month}</span>
+                      <span className="font-mono text-royal font-black">{h.range}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
       {/* Footer Info */}
-      {!showForensics && (
+      {!showForensics && !showAuditTrail && (
         <div className="w-full mt-auto pt-4 border-t border-slate-100 flex flex-col items-center gap-4 relative z-10">
           
           {/* CV Accuracy Metrics */}

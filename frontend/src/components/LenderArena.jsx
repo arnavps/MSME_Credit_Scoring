@@ -72,14 +72,6 @@ const LenderArena = memo(() => {
           </div>
         </div>
       </div>
-
-      {/* CENTERED BUTTON */}
-      <button className="w-full mt-8 py-5 bg-royal text-white font-black rounded-2xl shadow-xl shadow-royal/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden group">
-        <span className="relative z-10 flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
-          Initiate Bidding
-          <ArrowRight size={20} strokeWidth={1} className="group-hover:translate-x-1 transition-transform" />
-        </span>
-      </button>
     </div>
   );
 });
