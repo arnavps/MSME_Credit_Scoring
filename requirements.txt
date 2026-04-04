@@ -1,0 +1,42 @@
+# MSME Credit Scoring Platform - Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Core ML & Data Science
+pandas
+numpy
+scikit-learn
+lightgbm
+imbalanced-learn
+shap
+
+# Fraud Detection
+networkx
+
+# Time Series Forecasting (for TIMEBANK module)
+prophet
+
+# API Framework
+fastapi
+uvicorn[standard]
+pydantic
+
+# Database & Caching
+sqlalchemy
+
+# Utilities
+python-dateutil
+joblib
+
+# Data Generation
+Faker
+
+# Visualization (for graph export)
+matplotlib
+seaborn
+
+# AI Advisory
+ollama
+
+# Optional: Jupyter for experimentation
+# jupyter
+# notebook
