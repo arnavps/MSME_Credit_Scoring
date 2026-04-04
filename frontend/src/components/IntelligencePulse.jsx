@@ -12,12 +12,13 @@ const IntelligencePulse = memo(() => {
   const [showHistory, setShowHistory] = useState(false);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
 
-  const score = liveData?.score || data?.credit_score || 630;
+  // Priority: API data first, then streaming, then default
+  const score = data?.credit_score || liveData?.score || 630;
 
   // Dynamic Historical Ranges (M1-M6)
   const historicalRanges = React.useMemo(() => {
     return [6, 5, 4, 3, 2, 1].map((month) => {
-      const trend = (6 - month) * 15; 
+      const trend = (6 - month) * 15;
       const base = Math.max(300, score - trend - 150);
       const cap = Math.min(900, score - trend + 100);
       return { month: `M${month}`, range: `${base} - ${cap}` };
@@ -37,7 +38,7 @@ const IntelligencePulse = memo(() => {
     </div>
   );
 
-  const riskBand = liveData?.score ? (liveData.score > 750 ? 'Strong' : liveData.score > 600 ? 'Low-Medium' : 'High Risk') : (data?.risk_band || 'Low-Medium Risk');
+  const riskBand = data?.risk_band || (liveData?.score ? (liveData.score > 750 ? 'Strong' : liveData.score > 600 ? 'Low-Medium' : 'High Risk') : 'Low-Medium Risk');
   const amnesty = data?.amnesty_info || { applied: false, boost: 0 };
 
   // SVG gauge calculation: Range 300-900
@@ -50,7 +51,7 @@ const IntelligencePulse = memo(() => {
 
   return (
     <div className="bento-card h-full flex flex-col items-center group relative overflow-hidden">
-      
+
       {/* Module Header */}
       <div className="w-full flex items-center justify-between mb-8 relative z-10">
         <div className="flex flex-col">
@@ -59,18 +60,18 @@ const IntelligencePulse = memo(() => {
           </span>
           <h3 className="text-lg font-black text-slate-800 tracking-tighter">Reliability Index</h3>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {/* Score Audit Trail Toggle */}
-          <button 
+          <button
             onClick={() => {
               setShowAuditTrail(!showAuditTrail);
               setShowForensics(false);
             }}
             className={`
               flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
-              ${showAuditTrail 
-                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black' 
+              ${showAuditTrail
+                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black'
                 : 'bg-white border-slate-100 text-slate-400 hover:border-royal/30'
               }
             `}
@@ -80,17 +81,17 @@ const IntelligencePulse = memo(() => {
               {showAuditTrail ? 'Audit Active' : 'Score Audit'}
             </span>
           </button>
-          
+
           {/* Forensic Toggle */}
-          <button 
+          <button
             onClick={() => {
               setShowForensics(!showForensics);
               setShowAuditTrail(false);
             }}
             className={`
               flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
-              ${showForensics 
-                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black' 
+              ${showForensics
+                ? 'bg-slate-900 border-slate-800 text-emerald-400 font-black'
                 : 'bg-white border-slate-100 text-slate-400 hover:border-royal/30'
               }
             `}
@@ -156,15 +157,15 @@ const IntelligencePulse = memo(() => {
 
             {/* Historical Ranges Dropdown */}
             <div className="w-full px-4 mt-2">
-              <button 
+              <button
                 onClick={() => setShowHistory(!showHistory)}
                 className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors"
                 aria-expanded={showHistory}
               >
                 <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Historical Ranges (M1-M6)</span>
-                {showHistory ? <ChevronUp size={14} className="text-slate-500"/> : <ChevronDown size={14} className="text-slate-500" />}
+                {showHistory ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
               </button>
-              
+
               {showHistory && (
                 <div className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-x-6 gap-y-2 animate-in fade-in slide-in-from-top-1">
                   {historicalRanges.map(h => (
@@ -183,7 +184,7 @@ const IntelligencePulse = memo(() => {
       {/* Footer Info */}
       {!showForensics && !showAuditTrail && (
         <div className="w-full mt-auto pt-4 border-t border-slate-100 flex flex-col items-center gap-4 relative z-10">
-          
+
           {/* CV Accuracy Metrics */}
           <div className="flex items-center justify-between w-full px-2">
             <div className="flex flex-col items-start gap-0.5">

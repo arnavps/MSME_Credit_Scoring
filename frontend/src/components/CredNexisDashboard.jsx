@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Zap, 
-  AlertTriangle, 
-  CheckCircle2, 
-  TrendingUp, 
-  Users, 
-  Cpu, 
-  Quote, 
-  ChevronRight, 
+import {
+  Shield,
+  Zap,
+  AlertTriangle,
+  CheckCircle2,
+  TrendingUp,
+  Users,
+  Cpu,
+  Quote,
+  ChevronRight,
   Network,
   Activity
 } from 'lucide-react';
@@ -35,18 +35,48 @@ const glassCard = {
 const LAST_UPDATED = 'Live';
 
 const CredNexisDashboard = React.memo(function CredNexisDashboard() {
-  const { data, liveData, alerts, isConnected } = useDashboard();
+  const { data, liveData, alerts, isConnected, isHeuristic, error, loading } = useDashboard();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const displayScore = liveData?.score || data?.credit_score || 630;
+  const displayScore = data?.credit_score || liveData?.score || 630;
   const amnesty = data?.amnesty_info || { applied: false, boost: 0 };
   const fraudMetrics = liveData?.features?.net_inflow_ratio < -0.1 ? { is_circular: true } : (data?.fraudAnalysis || { is_circular: false });
 
   if (!mounted) return null;
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <Activity className="mx-auto text-blue-500 animate-pulse mb-4" size={48} />
+          <h2 className="text-xl font-bold text-white mb-2">Syncing Credit Intelligence...</h2>
+          <p className="text-slate-400">Performing 5-Model XGBoost/XGB/IF Audit...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-8">
+        <div style={glassCard} className="max-w-md w-full text-center border-red-500/30">
+          <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">System Handoff Failure</h2>
+          <p className="text-slate-500 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-700 transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -78,9 +108,9 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
-             {amnesty.applied && (
+            {amnesty.applied && (
               <AmnestyBadge boost={amnesty.boost} isApplied={true} />
             )}
             <div className="text-right">
@@ -261,7 +291,12 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
                 <Cpu className="text-blue-400" size={20} />
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ollama Intelligence</span>
               </div>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded">LOCAL_LLM</span>
+              <div className="flex items-center gap-2">
+                {isHeuristic && (
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-950/50 px-2 py-1 rounded border border-amber-500/30">HEURISTIC_DISCOVERY</span>
+                )}
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded">LOCAL_LLM</span>
+              </div>
             </div>
 
             <div className="space-y-6 relative">

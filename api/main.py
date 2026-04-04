@@ -108,6 +108,7 @@ class AdvisoryReport(BaseModel):
     bankers_verdict: str
     risk_context: str
     thirty_day_fix: List[str]
+    is_heuristic: bool = False
 
 class ModelTraceStep(BaseModel):
     stage: str
@@ -128,6 +129,7 @@ class InferenceTraceResponse(BaseModel):
     top_5_reasons: ReasonsGroup
     recommendation: Recommendation
     advisory: AdvisoryReport
+    stream_velocities: Dict[str, float]
     timestamp: str
 
 # --- AMNESTY ENDPOINTS --- #
@@ -343,6 +345,12 @@ async def infer_risk_with_trace(gstin: str):
     loan_amount = max(score_based, gst_based)
     loan_amount = min(5_000_000, max(200_000, loan_amount))
     
+    # 10. Map Stream Velocities (Synchronized with Dashboard)
+    upi_vel = round((1 - record.get("upi_bounce_rate", 0)) * 100, 1)
+    pos_vel = round(record.get("collection_efficiency", 0) * 100, 1)
+    gst_vel = round(record.get("filing_compliance_rate", 0) * 100, 1)
+    eway_vel = round(min(100, max(0, (record.get("txn_velocity_mom", 0) + 0.5) * 80 + 20)), 1)
+
     return InferenceTraceResponse(
         gstin=gstin,
         credit_score=final_score,
@@ -352,6 +360,7 @@ async def infer_risk_with_trace(gstin: str):
             "circular_nodes": live_fraud["nodes"],
             "node_count": node_count,
             "is_circular": is_circular,
+            "flags": ["Circular Transaction Detected"] if is_circular else [],
             "fraud_ring": {
                 "nodes": live_fraud["nodes"],
                 "edges": live_fraud.get("edges", [])
@@ -370,6 +379,12 @@ async def infer_risk_with_trace(gstin: str):
             rate=round(max(10.5, 18.0 - (final_score - 300) / 600 * 7.5), 1)
         ),
         advisory=AdvisoryReport(**advisory_data),
+        stream_velocities={
+            "upi": upi_vel,
+            "pos": pos_vel,
+            "gst": gst_vel,
+            "eway": eway_vel
+        },
         timestamp=current_time
     )
 
@@ -441,90 +456,6 @@ async def get_arena_bids(gstin: str):
         marketplace_insight=insight
     )
 
-@app.get("/api/data")
-async def get_dashboard_data(gstin: str):
-    """
-    Unified Dashboard State:
-    Provides a single source of truth for all dashboard modules including AI Advisory.
-    """
-    # 1. Fetch record
-    record = get_msme_record(gstin)
-    
-    # 2. ML & Fraud Analysis
-    intel = predictor.predict_credit_intelligence(record)
-    fraud_metrics = fraud_engine.get_circularity_metrics(gstin)
-    
-    # 3. AI Advisory Generation
-    # Extract Sentinel Signals for LLM Context
-    sentinel_report = sentinel.get_ews_report(record, fraud_metrics)
-    sentinel_signals = [s["name"] for s in sentinel_report if s["severity"] in ["HIGH", "CRITICAL"]]
-    
-    advisory_data = await llm_service.generate_advisory_structured(
-        score=intel["credit_score"],
-        shap_reasons=intel["top_reasons"],
-        sentinel_signals=sentinel_signals
-    )
-    
-    # 4. Reason Categorization
-    pos_reasons = [r.replace("(+) ", "").replace("Strength: ", "") for r in intel["top_reasons"] if r.startswith("(+)")]
-    neg_reasons = [r.replace("(-) ", "").replace("High Risk Flag: ", "") for r in intel["top_reasons"] if r.startswith("(-)")]
-    
-    # Add circular transaction note to positive reasons if clean
-    if not fraud_metrics["is_circular"] and "No circular transactions detected" not in pos_reasons:
-        pos_reasons.append("No circular transactions detected")
-    
-    # Add fraud alert to negative if exists
-    if fraud_metrics["is_circular"] and "Abnormal circular flow detected" not in neg_reasons:
-        neg_reasons.insert(0, "Abnormal circular flow detected (!)")
-    
-    # 5. Synchronize High Risk Nodes
-    # Derived from circular_transaction_flag
-    circular_nodes = []
-    if record.get("circular_transaction_flag") == 1:
-        circular_nodes = ["ENTITY_ROOT", "ENTITY_PEER_A", "ENTITY_PEER_B"] # Stable peer group
-        
-    # 4. Map Stream Velocities (Static Mapping)
-    # UPI: Resilience / Bounces
-    upi_vel = round((1 - record.get("upi_bounce_rate", 0)) * 100, 1)
-    
-    # POS: Collection Efficiency
-    pos_vel = round(record.get("collection_efficiency", 0) * 100, 1)
-    
-    # GST: Filing Compliance
-    gst_vel = round(record.get("filing_compliance_rate", 0) * 100, 1)
-    
-    # E-WAY: Normalized Txn Velocity
-    # Map range [-0.5, 0.5] to [20, 100]
-    raw_mom = record.get("txn_velocity_mom", 0)
-    eway_vel = round(min(100, max(0, (raw_mom + 0.5) * 80 + 20)), 1)
-
-    return {
-        "rawData": record,
-        "credit_score": intel["credit_score"],
-        "cmr_equivalent": intel["cmr_equivalent"],
-        "recommendation": {
-            "amount": min(5000000, max(200000, max(intel["credit_score"] * 3000, round((intel["credit_score"] / 900) * (record.get("output_gst", 0) * 0.5), 0)))),
-            "tenure": 36 if intel["credit_score"] > 800 else (24 if intel["credit_score"] > 650 else 18),
-            "rate": round(max(10.5, 18.0 - (intel["credit_score"] - 300) / 600 * 7.5), 1)
-        },
-        "fraudAnalysis": {
-            "isFraudDetected": record["is_fraud"] == 1 or fraud_metrics["is_circular"],
-            "circularNodes": circular_nodes,
-            "flags": ["Circular Transaction Detected"] if record.get("circular_transaction_flag") == 1 else []
-        },
-        "streamVelocities": {
-            "upi": upi_vel,
-            "pos": pos_vel,
-            "gst": gst_vel,
-            "eway": eway_vel
-        },
-        "top_5_reasons": {
-            "positive": pos_reasons[:5],
-            "negative": neg_reasons[:5]
-        },
-        "advisory": advisory_data,
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
 
 
 # ============================================================================

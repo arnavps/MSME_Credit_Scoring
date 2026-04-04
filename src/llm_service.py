@@ -3,6 +3,7 @@ import logging
 import time
 from typing import List, Dict, Any
 import ollama
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -12,12 +13,28 @@ class LLMAdvisoryService:
         self.base_url = base_url
         self.client = ollama.AsyncClient(host=base_url)
 
+    async def _is_ollama_alive(self) -> bool:
+        """Fast health check to avoid blocking hangs."""
+        try:
+            async with httpx.AsyncClient() as check_client:
+                # Use a very short timeout for the health check
+                response = await check_client.get(f"{self.base_url}/api/tags", timeout=1.0)
+                return response.status_code == 200
+        except Exception:
+            return False
+
     async def generate_advisory_structured(self, score: int, shap_reasons: List[str], sentinel_signals: List[str]) -> Dict[str, Any]:
         """
         Generates a structured credit advisory (Dict) using local Ollama.
+        Defensive implementation with health checks and strict timeouts.
         """
         start_time = time.time()
         
+        # 1. Quick Health Check (prevents 20-minute hangs if Ollama is dead)
+        if not await self._is_ollama_alive():
+            logger.warning("Ollama service unreachable. Stepping into Heuristic Mode.")
+            return self._generate_heuristic_fallback_dict(score, shap_reasons, sentinel_signals)
+
         system_prompt = (
             "You are an Indian MSME Credit Expert. Convert raw financial ML data into a professional, "
             "high-trust credit report. You MUST provide exactly three sections: Banker's Verdict, Risk Context, "
@@ -36,6 +53,7 @@ class LLMAdvisoryService:
         """
 
         try:
+            # 2. Strict Generation Timeout
             response = await asyncio.wait_for(
                 self.client.generate(
                     model=self.model,
@@ -43,16 +61,17 @@ class LLMAdvisoryService:
                     prompt=user_prompt,
                     stream=False
                 ),
-                timeout=5.0
+                timeout=4.0 # Reduced from 5.0 for tighter dashboard loops
             )
             
             raw_text = response.get('response', "").strip()
             if raw_text:
                 logger.info(f"LLM Advisory generated in {time.time() - start_time:.2f}s")
-                # Simple parser for the standard format
                 parsed = self._parse_llm_response(raw_text)
                 if parsed: return parsed
             
+        except asyncio.TimeoutError:
+            logger.error("Ollama generation timed out. Falling back to heuristics.")
         except Exception as e:
             logger.error(f"Ollama/Parsing error: {e}. Falling back to heuristics.")
 
@@ -85,57 +104,31 @@ class LLMAdvisoryService:
 
     def _generate_heuristic_fallback_dict(self, score: int, shap_reasons: List[str], sentinel_signals: List[str]) -> Dict[str, Any]:
         """Provides a structured advisory if the LLM is slow or unavailable."""
-        
-        # Reason-Aware Phrases
         reasons_text = " ".join(shap_reasons).lower()
         
-        # 1. Dynamic Verdict
         if score >= 750:
-            if "velocity" in reasons_text: verdict = "Excellent growth trajectory with high transaction velocity, indicating a robust market position."
-            else: verdict = "Strong creditworthiness with low default probability; highly recommended for prime lending rates."
+            verdict = "Strong creditworthiness with low default probability; highly recommended for prime lending rates."
         elif score >= 600:
-            if "compliance" in reasons_text or "filing" in reasons_text: verdict = "Demonstrates core reliability, though credit flow is slightly throttled by administrative bottlenecks or tax filing delays."
-            else: verdict = "Moderate credit profile; borrower demonstrates reliability but carries sectoral or transaction-level sensitivities."
+            verdict = "Moderate credit profile; borrower demonstrates reliability but carries sectoral sensitivities."
         else:
-            if "bounce" in reasons_text or "risk" in reasons_text: verdict = "High-risk liquidity profile detected; immediate cash-flow hardening and debt-trap prevention strategies are required."
-            else: verdict = "Sub-optimal credit history; immediate intervention in operational liquidity is recommended."
+            verdict = "High-risk liquidity profile detected; immediate cash-flow hardening strategies are required."
 
-        # 2. Context Engineering
         strength_count = sum(1 for r in shap_reasons if "(+)" in r)
         risk_count = sum(1 for r in shap_reasons if "(-)" in r)
-        
         top_risk = next((r for r in shap_reasons if "(-)" in r), "general volatility")
+        
         risk_context = f"The profile is currently anchored by {strength_count} operational strengths, but {risk_count} critical flags—primarily {top_risk.replace('(-) High Risk Flag: ', '')}—are causing score compression."
         
-        if sentinel_signals:
-            risk_context += f" Sentinel telemetry ({len(sentinel_signals)} signals) confirms active friction in real-time collections."
-
-        # 3. Targeted 30-Day Fixes
-        fixes = []
-        if "compliance" in reasons_text: fixes.append("Resolve the recent GST filing slippage to unlock a better CMR band.")
-        if "velocity" in reasons_text: fixes.append("Diversify the buyer network to reduce reliance on single-party transaction clusters.")
-        if "bounce" in reasons_text: fixes.append("Standardize POS collection cycles to ensure zero cheque/UPI bounces.")
-        
-        # Fallbacks to ensure 3
-        while len(fixes) < 3:
-            if score < 700: fixes.append("Improve transaction density and maintain a consistent digital audit trail.")
-            else: fixes.append("Maintain the current trend to qualify for pre-approved limit expansions.")
-            if len(fixes) < 3: fixes.append("Clear any pending minor tax arrears to stabilize the Reliability Index.")
-        
-        if not fixes: # For elite scores
-            fixes.append("Maintain current transaction velocity to stay in the CMR-1 band.")
-            fixes.append("Explore limit expansion with Tier-1 banks.")
-            fixes.append("Diversify vendor group further to reduce supply chain risk.")
-        
-        # Ensure we have at least 3 bullets
-        while len(fixes) < 3:
-            fixes.append("Maintain consistent filing compliance records.")
+        fixes = ["Improve transaction density and maintain a consistent digital audit trail.", 
+                 "Resolve minor administrative filing delays to stabilize score.",
+                 "Maintain 15% cash reserve for liquidity buffer."]
 
         return {
             "bankers_verdict": verdict,
             "risk_context": risk_context,
-            "thirty_day_fix": fixes[:3]
+            "thirty_day_fix": fixes[:3],
+            "is_heuristic": True
         }
 
-# Singleton instance for the app
+# Singleton instance
 llm_service = LLMAdvisoryService()

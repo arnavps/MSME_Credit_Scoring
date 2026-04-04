@@ -89,12 +89,12 @@ export const DashboardProvider = ({ children }) => {
 
       if (payloadGstin === activeGstin) {
         setLiveData(payload);
-        setScoreHistory(prev => [...prev.slice(-29), { 
-          timestamp: payload.timestamp, 
-          score: payload.score 
+        setScoreHistory(prev => [...prev.slice(-29), {
+          timestamp: payload.timestamp,
+          score: payload.score
         }]);
       }
-      
+
       // Real-time Signal Processor (ICU Protocol v3)
       const newAlerts = [];
       const features = payload?.features;
@@ -169,13 +169,13 @@ export const DashboardProvider = ({ children }) => {
 
     setActiveGstin(gstin);
 
-    // Stability Lock Check
+    // 2. Fresh Data Fetch: Disabled Stability Lock for demo visibility
     const now = Date.now();
-    if (!bypassLock && isLocked && (now - lastUpdatedRef.current < CACHE_DURATION)) {
-      toast.info('Stability Lock Active - Displaying cached state');
-      setView('dashboard');
-      return;
-    }
+    // if (!bypassLock && isLocked && (now - lastUpdatedRef.current < CACHE_DURATION)) {
+    //   toast.info('Stability Lock Active - Displaying cached state');
+    //   setView('dashboard');
+    //   return;
+    // }
 
     if (!isAuthenticated && !forceAuth) {
       setPendingGstin(gstin);
@@ -203,6 +203,9 @@ export const DashboardProvider = ({ children }) => {
 
       const jsonData = await response.json();
 
+      // DEBUG: Log API response
+      console.log('[CredNexis] API Response for GSTIN:', gstin, jsonData);
+
       // Map new API response to unified data structure
       setData({
         credit_score: jsonData.credit_score,
@@ -210,6 +213,7 @@ export const DashboardProvider = ({ children }) => {
         recommendation: jsonData.recommendation,
         top_5_reasons: jsonData.top_5_reasons,
         advisory: jsonData.advisory,
+        is_heuristic: jsonData.advisory?.is_heuristic || false,
         fraudAnalysis: jsonData.fraud_analysis,
         amnesty_info: jsonData.amnesty_info,
         model_trace: jsonData.model_trace,
@@ -220,15 +224,9 @@ export const DashboardProvider = ({ children }) => {
       setRiskDataSynced(true);
 
 
-      // Update stream velocities from trace if available
-      const featureStep = jsonData.model_trace?.find(step => step.stage === 'Feature Transmission');
-      if (featureStep?.details) {
-        setStreamVelocities({
-          upi: Math.round(featureStep.details.transaction_velocity * 100) || 12,
-          pos: Math.round(featureStep.details.gst_compliance * 100) || 8,
-          gst: Math.round(featureStep.details.gst_compliance * 100) || 4,
-          eway: Math.round(featureStep.details.node_count * 10) || 2
-        });
+      // Update stream velocities from top-level field
+      if (jsonData.stream_velocities) {
+        setStreamVelocities(jsonData.stream_velocities);
       }
 
       // Update lock state
@@ -239,15 +237,15 @@ export const DashboardProvider = ({ children }) => {
       setView('dashboard');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      
+
       let msg = err.message;
       try {
         // Attempt to parse structured error from backend
         if (err.response) {
-            const errorJson = await err.response.json();
-            msg = errorJson.detail?.message || errorJson.detail || msg;
+          const errorJson = await err.response.json();
+          msg = errorJson.detail?.message || errorJson.detail || msg;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       setError(msg);
       setRiskDataSynced(false);
@@ -346,7 +344,8 @@ export const DashboardProvider = ({ children }) => {
       toggleStream,
       isFraudDetected,
       streamVelocities,
-      isStableMode: true
+      isStableMode: true,
+      isHeuristic: data?.is_heuristic || false
     }}>
       {children}
     </DashboardContext.Provider>
