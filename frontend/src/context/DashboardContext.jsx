@@ -51,11 +51,15 @@ const STABLE_DATA = {
 
 
 export const DashboardProvider = ({ children }) => {
-  const [data, setData] = useState(STABLE_DATA);
+  const [data, setData] = useState({
+    ...STABLE_DATA,
+    shap: {},
+    advisory: { bankers_verdict: '', risk_context: '', thirty_day_fix: [] }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('landing');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [view, setView] = useState('dashboard'); // Force Dashboard view
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Force Auth for Demo
   const [activeGstin, setActiveGstin] = useState(null);
   const [pendingGstin, setPendingGstin] = useState(null);
 
@@ -177,11 +181,12 @@ export const DashboardProvider = ({ children }) => {
     //   return;
     // }
 
-    if (!isAuthenticated && !forceAuth) {
-      setPendingGstin(gstin);
-      setView('login');
-      return;
-    }
+    // Authentication Bypassed for Demo
+    // if (!isAuthenticated && !forceAuth) {
+    //   setPendingGstin(gstin);
+    //   setView('login');
+    //   return;
+    // }
 
     // Initialize new abort controller
     abortControllerRef.current = new AbortController();

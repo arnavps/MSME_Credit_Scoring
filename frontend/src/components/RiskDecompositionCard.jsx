@@ -13,11 +13,11 @@ const RiskDecompositionCard = memo(() => {
     </div>
   );
 
-  const shapData = liveData?.shap || data?.top_5_reasons || { positive: [], negative: [] };
+  const shapData = data?.shap || liveData?.shap || {};
 
   return (
     <div className="bento-card h-[560px] flex flex-col relative overflow-hidden group">
-      
+
       {/* Module Header */}
       <div className="w-full flex flex-col items-center text-center mb-6 relative z-10">
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">
@@ -32,11 +32,11 @@ const RiskDecompositionCard = memo(() => {
 
       <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-           Explainability: SHAP High-Fidelity
+          Explainability: SHAP High-Fidelity
         </span>
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100">
-           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-           <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Live</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Live</span>
         </div>
       </div>
     </div>

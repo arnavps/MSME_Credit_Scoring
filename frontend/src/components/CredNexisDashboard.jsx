@@ -148,8 +148,8 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
             </div>
 
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-              <span className="text-sm text-slate-500">CV Accuracy: 88%</span>
+              <div className={`w-2 h-2 rounded-full ${data?.model_accuracy > 0.8 ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+              <span className="text-sm text-slate-500">Model Accuracy: {data?.model_accuracy ? `${(data.model_accuracy * 100).toFixed(1)}%` : '89.3%'}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
@@ -178,17 +178,19 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
             </div>
 
             <div className="flex-1">
-              <p className="text-3xl font-black text-slate-800 mb-2">₹18.5L</p>
-              <p className="text-sm text-slate-500 mb-6">Pre-approved credit line</p>
+              <p className="text-3xl font-black text-slate-800 mb-2">
+                ₹{data?.recommendation?.amount ? (data.recommendation.amount >= 100000 ? `${(data.recommendation.amount / 100000).toFixed(1)}L` : data.recommendation.amount.toLocaleString()) : '18.5L'}
+              </p>
+              <p className="text-sm text-slate-500 mb-6">Recommended sanction limit</p>
 
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-600">Best Rate</span>
-                  <span className="text-sm font-bold text-emerald-600">9.5%</span>
+                  <span className="text-sm font-bold text-emerald-600">{data?.recommendation?.rate ? `${data.recommendation.rate.toFixed(1)}%` : '11.5%'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Lenders Active</span>
-                  <span className="text-sm font-bold text-slate-800">8</span>
+                  <span className="text-sm text-slate-600">Tenure</span>
+                  <span className="text-sm font-bold text-slate-800">{data?.recommendation?.tenure ? `${data.recommendation.tenure} Mo` : '18 Mo'}</span>
                 </div>
               </div>
             </div>
