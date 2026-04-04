@@ -1,9 +1,33 @@
-import React, { memo } from 'react';
-import { Cpu, Quote, Signal } from 'lucide-react';
+import React, { memo, useMemo } from 'react';
+import { format, parseISO, isValid } from 'date-fns';
+import { Cpu, Quote, Signal, Clock, Shield } from 'lucide-react';
 import { useDashboard } from '../context/DashboardContext';
 
+function buildTopFivePlainReasons(top5) {
+   if (!top5 || typeof top5 !== 'object') return [];
+   const pos = Array.isArray(top5.positive) ? top5.positive : [];
+   const neg = Array.isArray(top5.negative) ? top5.negative : [];
+   return [...pos, ...neg].filter((s) => typeof s === 'string' && s.trim()).slice(0, 5);
+}
+
+function formatFreshness(iso, fallbackLabel) {
+   if (!iso) return fallbackLabel;
+   try {
+      const d = typeof iso === 'string' ? parseISO(iso) : new Date(iso);
+      if (!isValid(d)) return fallbackLabel;
+      return format(d, "MMM d, yyyy · HH:mm:ss");
+   } catch {
+      return fallbackLabel;
+   }
+}
+
 const ExplainabilityGrid = memo(() => {
-   const { data, loading } = useDashboard();
+   const { data, loading, liveData, isConnected } = useDashboard();
+
+   const topFiveReasons = useMemo(
+      () => buildTopFivePlainReasons(data?.top_5_reasons),
+      [data?.top_5_reasons]
+   );
 
    if (loading) return (
       <div className="bento-card h-[400px] animate-pulse bg-white border border-slate-100 flex flex-col items-center justify-center">
@@ -19,10 +43,15 @@ const ExplainabilityGrid = memo(() => {
       thirty_day_fix: ['Standardize GST filing date to before 10th', 'Resolve the pending ₹42,000 tax arrear']
    };
 
+   const riskBand = data?.risk_band || 'Not classified';
+
+   const apiFresh = formatFreshness(data?.timestamp, 'Awaiting risk API sync');
+   const liveFresh = liveData?.timestamp ? formatFreshness(liveData.timestamp, null) : null;
+
    return (
       <div className="bento-card h-full flex flex-col relative overflow-hidden group min-h-[420px]">
          {/* Card Header */}
-         <div className="flex items-center justify-between mb-10">
+         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
             <div className="flex items-center gap-3">
                <Cpu className="text-royal" size={24} strokeWidth={1.5} />
                <div className="flex flex-col">
@@ -30,10 +59,46 @@ const ExplainabilityGrid = memo(() => {
                   <h3 className="text-xl font-black text-slate-800 tracking-tighter">AI Executive Summary</h3>
                </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-royal/10 rounded-xl">
-               <span className="text-[10px] font-black text-royal uppercase tracking-widest">Synthesized Verdict v4</span>
+            <div className="flex flex-col items-stretch sm:items-end gap-2">
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-royal/10 rounded-xl w-fit">
+                  <span className="text-[10px] font-black text-royal uppercase tracking-widest">Synthesized Verdict v4</span>
+               </div>
+               <div className="flex flex-wrap items-center gap-2 justify-end">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-[10px] font-black text-slate-700 uppercase tracking-widest">
+                     <Shield size={12} className="text-royal shrink-0" />
+                     {riskBand}
+                  </span>
+                  <span
+                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-[9px] font-bold text-slate-500 tabular-nums"
+                     title="When the credit score and model outputs were last refreshed"
+                  >
+                     <Clock size={12} className="text-slate-400 shrink-0" />
+                     <span className="uppercase tracking-wider text-slate-400 font-black mr-1">Score freshness</span>
+                     {isConnected && liveFresh ? (
+                        <span>Live {liveFresh}</span>
+                     ) : (
+                        <span>API {apiFresh}</span>
+                     )}
+                  </span>
+               </div>
             </div>
          </div>
+
+         {/* Top 5 plain-language score drivers */}
+         {topFiveReasons.length > 0 && (
+            <div className="mb-8 p-5 rounded-2xl border border-slate-100 bg-slate-50/80">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] block mb-3">
+                  Top 5 reasons for this score
+               </span>
+               <ol className="list-decimal list-inside space-y-2.5 marker:text-royal marker:font-black">
+                  {topFiveReasons.map((reason, i) => (
+                     <li key={i} className="text-[13px] font-semibold text-slate-700 leading-snug pl-1">
+                        {reason}
+                     </li>
+                  ))}
+               </ol>
+            </div>
+         )}
 
          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* LEFT: Verdict & Context (Col 7) */}
@@ -79,12 +144,14 @@ const ExplainabilityGrid = memo(() => {
          </div>
 
          {/* Card Footer */}
-         <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
+         <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
             <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-               Unified Verdict Accuracy: 94.2%
+               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+               {isConnected ? 'Live stream connected' : 'Live stream offline — score from last API sync'}
             </div>
-            <span>Ollama Inference Sync: Nominal</span>
+            <span className="tabular-nums font-bold normal-case text-slate-500">
+               Model advisory synced · {isConnected && liveFresh ? `Live ${liveFresh}` : apiFresh}
+            </span>
          </div>
       </div>
    );

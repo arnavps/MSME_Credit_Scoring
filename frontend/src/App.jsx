@@ -113,7 +113,7 @@ function App() {
             <Route path="arena" element={<ArenaView />} />
             <Route path="sentinel" element={<SentinelDetail />} />
             <Route path="network" element={<NetworkDeepDive />} />
-            <Route path="labs" element={<ModelLabs />} />
+            <Route path="model-labs" element={<ModelLabs />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
