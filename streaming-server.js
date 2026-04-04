@@ -57,8 +57,8 @@ setInterval(() => {
         features.net_inflow_ratio > 0.2 ? "surplus cash inflow (+)" : "cash flow tight (-)",
         features.invoice_velocity > 10 ? "active billing (+)" : "low invoice velocity (-)",
         features.eway_trend > 5 ? "logistics moving (+)" : "static e-way trends (-)",
-        "No circular transactions detected",
-        "Consistent UPI cadence"
+        "No circular transactions detected (+)",
+        "Consistent UPI cadence (+)"
       ]
     },
     smoothing: {

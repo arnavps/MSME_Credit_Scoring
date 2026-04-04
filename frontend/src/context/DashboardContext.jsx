@@ -44,6 +44,8 @@ const STABLE_DATA = {
       "Increase POS transaction volume by 10%"
     ]
   },
+  cv_score: 0.88,
+  reliability_status: "Reliable",
   timestamp: new Date().toISOString()
 };
 

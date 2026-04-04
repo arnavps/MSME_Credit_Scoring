@@ -329,7 +329,9 @@ async def infer_risk_with_trace(gstin: str):
         neg_reasons.insert(0, "Abnormal circular flow detected (!)")
     
     # 9. Loan Recommendation
-    loan_amount = round((final_score / 900) * (record.get("output_gst", 0) * 0.5), 0)
+    gst_based = round((final_score / 900) * (record.get("output_gst", 0) * 0.5), 0)
+    score_based = final_score * 3000
+    loan_amount = max(score_based, gst_based)
     loan_amount = min(5_000_000, max(200_000, loan_amount))
     
     return InferenceTraceResponse(
@@ -469,7 +471,7 @@ async def get_dashboard_data(gstin: str):
         "credit_score": intel["credit_score"],
         "cmr_equivalent": intel["cmr_equivalent"],
         "recommendation": {
-            "amount": round((intel["credit_score"] / 900) * (record.get("output_gst", 0) * 0.5), 0),
+            "amount": min(5000000, max(200000, max(intel["credit_score"] * 3000, round((intel["credit_score"] / 900) * (record.get("output_gst", 0) * 0.5), 0)))),
             "tenure": 24,
             "rate": 14.5
         },
