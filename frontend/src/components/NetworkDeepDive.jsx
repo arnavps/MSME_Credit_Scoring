@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Map, ZoomIn, ZoomOut, RotateCcw, Search, AlertTriangle, Info } from 'lucide-react';
 
-// Mock fraud network data
+// Mock fraud network data - Spread out more for better visibility
 const mockNodes = [
-  { id: '27AAAPC1234A1Z1', name: 'ABC Traders', type: 'suspicious', x: 300, y: 200 },
-  { id: '29BBBDE5678B2Z2', name: 'XYZ Enterprises', type: 'fraudulent', x: 500, y: 150 },
-  { id: '33CCCFH9012C3Z3', name: 'LMN Corporation', type: 'suspicious', x: 450, y: 350 },
-  { id: '07DDDGJ3456D4Z4', name: 'PQR Services', type: 'normal', x: 200, y: 300 },
-  { id: '19EEEIK7890E5Z5', name: 'STU Logistics', type: 'normal', x: 600, y: 250 },
-  { id: '24FFFFL2345F6Z6', name: 'VWX Imports', type: 'suspicious', x: 350, y: 450 },
-  { id: '12GGGGN6789G7Z7', name: 'YZA Exports', type: 'fraudulent', x: 550, y: 400 },
-  { id: '08HHHHP0123H8Z8', name: 'BCD Manufacturing', type: 'normal', x: 150, y: 450 },
+  { id: '27AAAPC1234A1Z1', name: 'ABC Traders', type: 'suspicious', x: 200, y: 250 },
+  { id: '29BBBDE5678B2Z2', name: 'XYZ Enterprises', type: 'fraudulent', x: 600, y: 150 },
+  { id: '33CCCFH9012C3Z3', name: 'LMN Corporation', type: 'suspicious', x: 550, y: 450 },
+  { id: '07DDDGJ3456D4Z4', name: 'PQR Services', type: 'normal', x: 100, y: 400 },
+  { id: '19EEEIK7890E5Z5', name: 'STU Logistics', type: 'normal', x: 900, y: 300 },
+  { id: '24FFFFL2345F6Z6', name: 'VWX Imports', type: 'suspicious', x: 350, y: 650 },
+  { id: '12GGGGN6789G7Z7', name: 'YZA Exports', type: 'fraudulent', x: 750, y: 550 },
+  { id: '08HHHHP0123H8Z8', name: 'BCD Manufacturing', type: 'normal', x: 50, y: 600 },
 ];
 
 const mockEdges = [
@@ -110,32 +110,33 @@ function NetworkDeepDive() {
     mockNodes.forEach(node => {
       const isHovered = hoveredNode?.id === node.id;
       const isSelected = selectedNode?.id === node.id;
+      const nodeRadius = isHovered || isSelected ? 28 : 24;
 
       // Node circle
       ctx.beginPath();
-      ctx.arc(node.x, node.y, isHovered || isSelected ? 30 : 25, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
       ctx.fillStyle = nodeColors[node.type];
       ctx.fill();
 
       // Glow effect for fraudulent nodes
       if (node.type === 'fraudulent' || isSelected) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, isHovered || isSelected ? 40 : 35, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, nodeRadius + 10, 0, Math.PI * 2);
         ctx.strokeStyle = node.type === 'fraudulent' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)';
         ctx.lineWidth = 3;
         ctx.stroke();
       }
 
-      // Node label
+      // Node label - larger font and better positioned
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(node.name, node.x, node.y + 5);
+      ctx.fillText(node.name, node.x, node.y + 4);
 
-      // GSTIN below name
-      ctx.fillStyle = '#94a3b8';
+      // GSTIN below name - smaller and faded
+      ctx.fillStyle = '#64748b';
       ctx.font = '10px sans-serif';
-      ctx.fillText(node.id.slice(0, 10) + '...', node.x, node.y + 45);
+      ctx.fillText(node.id.slice(0, 12) + '...', node.x, node.y + 40);
     });
 
     ctx.restore();
@@ -195,9 +196,9 @@ function NetworkDeepDive() {
   };
 
   return (
-    <div className="h-[calc(100vh-200px)] flex flex-col">
+    <div className="h-[calc(100vh-120px)] min-h-[700px] flex flex-col">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Map className="text-primary" size={28} />
           <div>
@@ -245,12 +246,12 @@ function NetworkDeepDive() {
       </div>
 
       {/* Canvas Container */}
-      <div className="flex-1 relative bg-slate-900 rounded-2xl overflow-hidden">
+      <div className="flex-1 relative bg-slate-900 rounded-2xl overflow-hidden min-h-[500px]">
         <canvas
           ref={canvasRef}
-          width={1200}
-          height={600}
-          className="cursor-move"
+          width={1400}
+          height={800}
+          className="cursor-move w-full h-full object-contain"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -284,9 +285,9 @@ function NetworkDeepDive() {
               <div className="flex items-center gap-2 mb-1">
                 <span className={`
                   text-[10px] font-bold px-2 py-0.5 rounded uppercase
-                  ${selectedNode.type === 'fraudulent' ? 'bg-red-100 text-red-700' : 
-                    selectedNode.type === 'suspicious' ? 'bg-amber-100 text-amber-700' : 
-                    'bg-blue-100 text-blue-700'}
+                  ${selectedNode.type === 'fraudulent' ? 'bg-red-100 text-red-700' :
+                    selectedNode.type === 'suspicious' ? 'bg-amber-100 text-amber-700' :
+                      'bg-blue-100 text-blue-700'}
                 `}>
                   {selectedNode.type}
                 </span>
@@ -294,7 +295,7 @@ function NetworkDeepDive() {
               <h3 className="text-lg font-bold text-slate-800">{selectedNode.name}</h3>
               <p className="text-sm text-slate-500 font-mono">{selectedNode.id}</p>
             </div>
-            <button 
+            <button
               onClick={() => setSelectedNode(null)}
               className="text-slate-400 hover:text-slate-600"
             >
@@ -315,13 +316,13 @@ function NetworkDeepDive() {
               <div className="text-xs text-slate-400 uppercase">Risk Score</div>
               <div className={`
                 text-lg font-bold
-                ${selectedNode.type === 'fraudulent' ? 'text-red-500' : 
-                  selectedNode.type === 'suspicious' ? 'text-amber-500' : 
-                  'text-blue-500'}
+                ${selectedNode.type === 'fraudulent' ? 'text-red-500' :
+                  selectedNode.type === 'suspicious' ? 'text-amber-500' :
+                    'text-blue-500'}
               `}>
-                {selectedNode.type === 'fraudulent' ? '92/100' : 
-                  selectedNode.type === 'suspicious' ? '67/100' : 
-                  '23/100'}
+                {selectedNode.type === 'fraudulent' ? '92/100' :
+                  selectedNode.type === 'suspicious' ? '67/100' :
+                    '23/100'}
               </div>
             </div>
           </div>

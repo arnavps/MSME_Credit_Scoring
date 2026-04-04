@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { FlaskConical, Database, ArrowRight, FileJson, Cpu, ChevronRight, Search, Zap, Shield, Brain, Target, Activity } from 'lucide-react';
 import InferenceTrace from './InferenceTrace';
+import ModelEnsembleVisualizer from './ModelEnsembleVisualizer';
 
 // 15 Key Features from msme_synthetic_3000.csv
 const keyFeatures = [
@@ -356,6 +357,11 @@ function ModelLabs() {
       {/* Inference Trace Section */}
       <div className="mt-6">
         <InferenceTrace />
+      </div>
+
+      {/* 5-Model Data Flow Visualization */}
+      <div className="mt-6 h-[600px]">
+        <ModelEnsembleVisualizer />
       </div>
     </div>
   );
