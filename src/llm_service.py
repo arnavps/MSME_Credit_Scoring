@@ -85,32 +85,42 @@ class LLMAdvisoryService:
 
     def _generate_heuristic_fallback_dict(self, score: int, shap_reasons: List[str], sentinel_signals: List[str]) -> Dict[str, Any]:
         """Provides a structured advisory if the LLM is slow or unavailable."""
-        # Banker's Verdict
+        
+        # Reason-Aware Phrases
+        reasons_text = " ".join(shap_reasons).lower()
+        
+        # 1. Dynamic Verdict
         if score >= 750:
-            verdict = "Strong creditworthiness with low default probability; highly recommended for prime lending rates."
+            if "velocity" in reasons_text: verdict = "Excellent growth trajectory with high transaction velocity, indicating a robust market position."
+            else: verdict = "Strong creditworthiness with low default probability; highly recommended for prime lending rates."
         elif score >= 600:
-            verdict = "Moderate credit profile; borrower demonstrates reliability but carries sectoral or transaction-level sensitivities."
+            if "compliance" in reasons_text or "filing" in reasons_text: verdict = "Demonstrates core reliability, though credit flow is slightly throttled by administrative bottlenecks or tax filing delays."
+            else: verdict = "Moderate credit profile; borrower demonstrates reliability but carries sectoral or transaction-level sensitivities."
         else:
-            verdict = "High-risk profile detected; immediate credit hardening and capital preservation strategy required."
+            if "bounce" in reasons_text or "risk" in reasons_text: verdict = "High-risk liquidity profile detected; immediate cash-flow hardening and debt-trap prevention strategies are required."
+            else: verdict = "Sub-optimal credit history; immediate intervention in operational liquidity is recommended."
 
-        # Risk Context
+        # 2. Context Engineering
         strength_count = sum(1 for r in shap_reasons if "(+)" in r)
         risk_count = sum(1 for r in shap_reasons if "(-)" in r)
         
-        risk_context = f"The profile is influenced by {risk_count} critical risk flags and {strength_count} operational strengths. "
+        top_risk = next((r for r in shap_reasons if "(-)" in r), "general volatility")
+        risk_context = f"The profile is currently anchored by {strength_count} operational strengths, but {risk_count} critical flags—primarily {top_risk.replace('(-) High Risk Flag: ', '')}—are causing score compression."
+        
         if sentinel_signals:
-            risk_context += f"Sentinel alerts ({len(sentinel_signals)}) indicate potential friction in cash flow or compliance."
-        else:
-            risk_context += "The absence of Sentinel alerts suggests a clean transaction record."
+            risk_context += f" Sentinel telemetry ({len(sentinel_signals)} signals) confirms active friction in real-time collections."
 
-        # 30-Day Fix
+        # 3. Targeted 30-Day Fixes
         fixes = []
-        if score < 750:
-            fixes.append("Review and resolve high-impact SHAP risk flags to improve model trust.")
-        if sentinel_signals:
-            fixes.append("Clear any pending GST or compliance alerts to stabilize Sentinel scores.")
-        if "(+) Strength" not in "".join(shap_reasons):
-            fixes.append("Improve transaction velocity and buyer diversification to build credit history.")
+        if "compliance" in reasons_text: fixes.append("Resolve the recent GST filing slippage to unlock a better CMR band.")
+        if "velocity" in reasons_text: fixes.append("Diversify the buyer network to reduce reliance on single-party transaction clusters.")
+        if "bounce" in reasons_text: fixes.append("Standardize POS collection cycles to ensure zero cheque/UPI bounces.")
+        
+        # Fallbacks to ensure 3
+        while len(fixes) < 3:
+            if score < 700: fixes.append("Improve transaction density and maintain a consistent digital audit trail.")
+            else: fixes.append("Maintain the current trend to qualify for pre-approved limit expansions.")
+            if len(fixes) < 3: fixes.append("Clear any pending minor tax arrears to stabilize the Reliability Index.")
         
         if not fixes: # For elite scores
             fixes.append("Maintain current transaction velocity to stay in the CMR-1 band.")

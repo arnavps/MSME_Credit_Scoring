@@ -144,6 +144,7 @@ function LandingPage() {
     e.preventDefault();
     if (gstin.trim()) {
       fetchScoreData(gstin.trim());
+      navigate('/dashboard');
     }
   };
 

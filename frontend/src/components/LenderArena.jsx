@@ -15,8 +15,15 @@ const LenderArena = memo(() => {
   const recommendation = data?.recommendation || { amount: 1850000, tenure: 18, rate: 11.5 };
   const { amount, tenure, rate } = recommendation;
 
-  // EMI calculation (Locked)
-  const emi = 112388;
+  // Real-time EMI Calculation: [P * r * (1+r)^n] / [(1+r)^n - 1]
+  const calculateEMI = (P, annualRate, n) => {
+    if (!P || !annualRate || !n) return 0;
+    const r = (annualRate / 12) / 100;
+    const emiValue = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return Math.round(emiValue);
+  };
+
+  const emi = calculateEMI(amount, rate, tenure);
 
   return (
     <div className="bento-card h-full flex flex-col items-center">

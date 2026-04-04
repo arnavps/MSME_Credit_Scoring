@@ -184,7 +184,16 @@ def get_msme_record(gstin: str) -> dict:
         
     record = msme_db[msme_db["gstin"] == gstin]
     if record.empty:
-        raise HTTPException(status_code=404, detail=f"Target GSTIN {gstin} not found in database records.")
+        # Provide sample GSTINs for demo purposes if not found
+        samples = ["18UZFBE1356T1Z1", "33SUXZZ2218X1Z1", "14YWMDG3562Y1Z3"]
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "message": f"Target GSTIN {gstin} not found in database records.",
+                "suggestion": "Try one of these sample GSTINs from the dataset:",
+                "samples": samples
+            }
+        )
     return record.iloc[0].to_dict()
 
 @app.get("/api/v1/risk/{gstin}", response_model=InferenceTraceResponse)
@@ -357,8 +366,8 @@ async def infer_risk_with_trace(gstin: str):
         ),
         recommendation=Recommendation(
             amount=loan_amount,
-            tenure=24,
-            rate=14.5 if final_score > 600 else 18.0
+            tenure=36 if final_score > 800 else (24 if final_score > 650 else 18),
+            rate=round(max(10.5, 18.0 - (final_score - 300) / 600 * 7.5), 1)
         ),
         advisory=AdvisoryReport(**advisory_data),
         timestamp=current_time
@@ -472,8 +481,8 @@ async def get_dashboard_data(gstin: str):
         "cmr_equivalent": intel["cmr_equivalent"],
         "recommendation": {
             "amount": min(5000000, max(200000, max(intel["credit_score"] * 3000, round((intel["credit_score"] / 900) * (record.get("output_gst", 0) * 0.5), 0)))),
-            "tenure": 24,
-            "rate": 14.5
+            "tenure": 36 if intel["credit_score"] > 800 else (24 if intel["credit_score"] > 650 else 18),
+            "rate": round(max(10.5, 18.0 - (intel["credit_score"] - 300) / 600 * 7.5), 1)
         },
         "fraudAnalysis": {
             "isFraudDetected": record["is_fraud"] == 1 or fraud_metrics["is_circular"],

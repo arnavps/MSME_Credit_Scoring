@@ -12,14 +12,17 @@ const IntelligencePulse = memo(() => {
   const [showHistory, setShowHistory] = useState(false);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
 
-  const historicalRanges = [
-    { month: 'M1', range: '230 - 490' },
-    { month: 'M2', range: '250 - 510' },
-    { month: 'M3', range: '280 - 550' },
-    { month: 'M4', range: '310 - 590' },
-    { month: 'M5', range: '380 - 640' },
-    { month: 'M6', range: '420 - 660' },
-  ];
+  const score = liveData?.score || data?.credit_score || 630;
+
+  // Dynamic Historical Ranges (M1-M6)
+  const historicalRanges = React.useMemo(() => {
+    return [6, 5, 4, 3, 2, 1].map((month) => {
+      const trend = (6 - month) * 15; 
+      const base = Math.max(300, score - trend - 150);
+      const cap = Math.min(900, score - trend + 100);
+      return { month: `M${month}`, range: `${base} - ${cap}` };
+    });
+  }, [score]);
 
   useEffect(() => {
     if (showForensics && activeGstin) {
@@ -34,7 +37,6 @@ const IntelligencePulse = memo(() => {
     </div>
   );
 
-  const score = liveData?.score || data?.credit_score || 630;
   const riskBand = liveData?.score ? (liveData.score > 750 ? 'Strong' : liveData.score > 600 ? 'Low-Medium' : 'High Risk') : (data?.risk_band || 'Low-Medium Risk');
   const amnesty = data?.amnesty_info || { applied: false, boost: 0 };
 

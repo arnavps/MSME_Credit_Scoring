@@ -68,6 +68,11 @@ export const DashboardProvider = ({ children }) => {
   const socketRef = useRef(null);
   const abortControllerRef = useRef(null);
 
+  const [riskDataSynced, setRiskDataSynced] = useState(false);
+  const [amnestyPreview, setAmnestyPreview] = useState(null);
+  const [amnestyPreviewLoading, setAmnestyPreviewLoading] = useState(false);
+  const [amnestyPreviewError, setAmnestyPreviewError] = useState(null);
+
   // Connect to Streaming Server
   useEffect(() => {
     socketRef.current = io(SOCKET_URL);
@@ -78,28 +83,36 @@ export const DashboardProvider = ({ children }) => {
     });
 
     socketRef.current.on('update', (payload) => {
-      setLiveData(payload);
-      setScoreHistory(prev => [...prev.slice(-29), { 
-        timestamp: payload.timestamp, 
-        score: payload.score 
-      }]);
+      // Only update live metrics if it's for the currently x-rayed merchant
+      // If no gstin in payload, assume it's for the demo_gstin
+      const payloadGstin = payload.gstin || '27AAPFU0939F1ZV';
+
+      if (payloadGstin === activeGstin) {
+        setLiveData(payload);
+        setScoreHistory(prev => [...prev.slice(-29), { 
+          timestamp: payload.timestamp, 
+          score: payload.score 
+        }]);
+      }
       
       // Real-time Signal Processor (ICU Protocol v3)
       const newAlerts = [];
-      const { features } = payload;
+      const features = payload?.features;
 
-      if (features.net_inflow_ratio < -0.1) {
-        newAlerts.push({ id: 'S08', text: 'Critical: Negative cash flow ratio detected', severity: 'HIGH' });
-      } else if (features.net_inflow_ratio < 0.1) {
-        newAlerts.push({ id: 'S08', text: 'Warning: Cash flow tightening observed', severity: 'MEDIUM' });
-      }
+      if (features) {
+        if (features.net_inflow_ratio < -0.1) {
+          newAlerts.push({ id: 'S08', text: 'Critical: Negative cash flow ratio detected', severity: 'HIGH' });
+        } else if (features.net_inflow_ratio < 0.1) {
+          newAlerts.push({ id: 'S08', text: 'Warning: Cash flow tightening observed', severity: 'MEDIUM' });
+        }
 
-      if (features.invoice_velocity > 10) {
-        newAlerts.push({ id: 'S11', text: 'Alert: Unusual Invoice Velocity spike', severity: 'LOW' });
-      }
+        if (features.invoice_velocity > 10) {
+          newAlerts.push({ id: 'S11', text: 'Alert: Unusual Invoice Velocity spike', severity: 'LOW' });
+        }
 
-      if (features.txn_density < 0.2) {
-        newAlerts.push({ id: 'S02', text: 'GST Logic: Dormant transaction activity', severity: 'MEDIUM' });
+        if (features.txn_density < 0.2) {
+          newAlerts.push({ id: 'S02', text: 'GST Logic: Dormant transaction activity', severity: 'MEDIUM' });
+        }
       }
 
       if (newAlerts.length > 0) {
@@ -150,6 +163,8 @@ export const DashboardProvider = ({ children }) => {
       bypassLock = true;
       setIsLocked(false);
       lastUpdatedRef.current = 0;
+      // Reset data during fresh search to avoid confusion
+      setData(null);
     }
 
     setActiveGstin(gstin);
@@ -179,7 +194,12 @@ export const DashboardProvider = ({ children }) => {
         signal: abortControllerRef.current.signal
       });
 
-      if (!response.ok) throw new Error('Data Sync Failure');
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const detail = errorBody.detail;
+        const msg = (typeof detail === 'object') ? (detail.message || JSON.stringify(detail)) : (detail || 'System Handoff Failure');
+        throw new Error(msg);
+      }
 
       const jsonData = await response.json();
 
@@ -219,8 +239,19 @@ export const DashboardProvider = ({ children }) => {
       setView('dashboard');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      setError(err.message);
+      
+      let msg = err.message;
+      try {
+        // Attempt to parse structured error from backend
+        if (err.response) {
+            const errorJson = await err.response.json();
+            msg = errorJson.detail?.message || errorJson.detail || msg;
+        }
+      } catch (e) {}
+
+      setError(msg);
       setRiskDataSynced(false);
+      // Keep view as dashboard so error can be shown in context
       setView('dashboard');
     } finally {
       if (abortControllerRef.current?.signal.aborted) return;
@@ -258,11 +289,6 @@ export const DashboardProvider = ({ children }) => {
 
   // Derived Fraud Boolean (Single Source of Truth)
   const isFraudDetected = (data?.fraudAnalysis?.circularNodes?.length || 0) > 0;
-
-  const [amnestyPreview, setAmnestyPreview] = useState(null);
-  const [amnestyPreviewLoading, setAmnestyPreviewLoading] = useState(false);
-  const [amnestyPreviewError, setAmnestyPreviewError] = useState(null);
-  const [riskDataSynced, setRiskDataSynced] = useState(false);
 
   useEffect(() => {
     setAmnestyPreview(null);
