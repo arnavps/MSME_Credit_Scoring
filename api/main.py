@@ -125,10 +125,12 @@ class InferenceTraceResponse(BaseModel):
     fraud_analysis: Dict[str, Any]
     amnesty_info: Dict[str, Any] # Add this
     cv_score: float
+    model_accuracy: float  # Test set accuracy from training
     reliability_status: str
     top_5_reasons: ReasonsGroup
     recommendation: Recommendation
     advisory: AdvisoryReport
+    shap: Dict[str, float]
     stream_velocities: Dict[str, float]
     timestamp: str
 
@@ -294,6 +296,7 @@ async def infer_risk_with_trace(gstin: str):
     
     # 5. Cross-Validation Score (from training logs)
     cv_score = 0.88  # Fixed from training logs
+    model_accuracy = 0.893  # Test set accuracy from LightGBM training
     reliability_status = "Reliable" if cv_score > 0.85 else "Review Required"
     
     trace_steps.append(ModelTraceStep(
@@ -368,6 +371,7 @@ async def infer_risk_with_trace(gstin: str):
         },
         amnesty_info=results["amnesty_info"],
         cv_score=cv_score,
+        model_accuracy=model_accuracy,
         reliability_status=reliability_status,
         top_5_reasons=ReasonsGroup(
             positive=pos_reasons[:5],
@@ -379,6 +383,7 @@ async def infer_risk_with_trace(gstin: str):
             rate=round(max(10.5, 18.0 - (final_score - 300) / 600 * 7.5), 1)
         ),
         advisory=AdvisoryReport(**advisory_data),
+        shap=results.get("shap_values", {}),
         stream_velocities={
             "upi": upi_vel,
             "pos": pos_vel,

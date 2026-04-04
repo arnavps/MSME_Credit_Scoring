@@ -213,11 +213,13 @@ export const DashboardProvider = ({ children }) => {
         recommendation: jsonData.recommendation,
         top_5_reasons: jsonData.top_5_reasons,
         advisory: jsonData.advisory,
+        shap: jsonData.shap,
         is_heuristic: jsonData.advisory?.is_heuristic || false,
         fraudAnalysis: jsonData.fraud_analysis,
         amnesty_info: jsonData.amnesty_info,
         model_trace: jsonData.model_trace,
         cv_score: jsonData.cv_score,
+        model_accuracy: jsonData.model_accuracy,
         reliability_status: jsonData.reliability_status,
         timestamp: jsonData.timestamp
       });

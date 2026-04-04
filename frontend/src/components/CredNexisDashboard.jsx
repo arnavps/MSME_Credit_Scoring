@@ -258,7 +258,7 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
         {/* BOTTOM LEFT: Behavioral Intelligence (SHAP + Alerts) */}
         <div className="col-span-5 flex flex-col gap-6">
           <div style={glassCard}>
-            <ShapChart shap={liveData?.shap} />
+            <ShapChart shap={data?.shap} />
           </div>
           <div style={glassCard} className="flex-1">
             <Alerts alerts={alerts} />
@@ -304,9 +304,9 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
 
               <div>
                 <p className="text-lg text-slate-200 font-medium leading-relaxed italic border-l-2 border-blue-500/50 pl-4">
-                  {fraudMetrics.is_circular
-                    ? "UNIFIED VERDICT: High-priority circular topology detected in UPI logs. While GST compliance remains stable, the S13 round-tripping flag necessitates a manual forensic review before credit limit expansion."
-                    : (data?.advisory?.bankers_verdict || "The MSME demonstrates strong revenue cadence and sector-leading compliance metrics.")
+                  {data?.advisory?.bankers_verdict || (data?.fraudAnalysis?.is_circular 
+                    ? "UNIFIED VERDICT: High-priority circular topology detected. Forensic review required." 
+                    : "The MSME demonstrates strong revenue cadence and sector-leading compliance metrics.")
                   }
                 </p>
               </div>
@@ -314,9 +314,9 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
               <div className="pt-4 border-t border-slate-700/50">
                 <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">Risk Context</h4>
                 <p className="text-sm text-slate-400 leading-relaxed">
-                  {fraudMetrics.is_circular
-                    ? "CRITICAL: Score calibration heavily penalized by suspected round-tripping. Recommend immediate verification of recent ₹4.3L UPI transfers."
-                    : (data?.advisory?.risk_context || "Primary risk stems from transient liquidity tightening observed in historical records.")
+                  {data?.advisory?.risk_context || (data?.fraudAnalysis?.is_circular
+                    ? "CRITICAL: Score calibration heavily penalized by suspected round-tripping."
+                    : "Primary risk stems from transient liquidity tightening observed in historical records.")
                   }
                 </p>
               </div>
@@ -324,12 +324,12 @@ const CredNexisDashboard = React.memo(function CredNexisDashboard() {
               <div className="pt-4 border-t border-slate-700/50">
                 <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-3">30-Day Tactical Roadmap</h4>
                 <ul className="space-y-2">
-                  {(fraudMetrics.is_circular ? [
-                    'Investigate circular transaction parties within 7 days',
-                    'Audit statutory GST records for intra-group billing',
-                    'Maintain 15% cash reserve for liquidity buffer',
-                    'Submit auditor-verified transaction logs'
-                  ] : (data?.advisory?.thirty_day_fix || [
+                  {(data?.advisory?.thirty_day_fix && data.advisory.thirty_day_fix.length > 0 ? data.advisory.thirty_day_fix : (data?.fraudAnalysis?.is_circular ? [
+                    'Investigate circular transaction parties',
+                    'Audit statutory GST records',
+                    'Maintain 15% cash reserve',
+                    'Submit verified transaction logs'
+                  ] : [
                     'Standardize GST filing date to before 10th',
                     'Increase POS transaction volume by 10%',
                     'Resolve pending invoice disputes',

@@ -189,11 +189,11 @@ const IntelligencePulse = memo(() => {
           <div className="flex items-center justify-between w-full px-2">
             <div className="flex flex-col items-start gap-0.5">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Model Accuracy</span>
-              <span className="text-sm font-bold text-emerald-500">{(data?.cv_score ? (data.cv_score * 100).toFixed(1) : 88.0)}% CV</span>
+              <span className="text-sm font-bold text-emerald-500">{(data?.cv_score ? (data.cv_score * 100).toFixed(1) : 88.0)}%</span>
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reliability</span>
-              <span className="text-sm font-bold text-slate-700">{data?.reliability_status || 'Reliable'}</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CV Score</span>
+              <span className="text-sm font-bold text-slate-700">{data?.cv_score ? data.cv_score.toFixed(2) : '0.88'}</span>
             </div>
           </div>
 

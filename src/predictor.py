@@ -308,6 +308,7 @@ class UnifiedPredictor:
             "cmr_equivalent": self._score_to_cmr(final_score),
             "fraud_detected": fraud_triggered,
             "top_reasons": reasons[:5],
+            "shap_values": dict(zip(self.master_features, sv.tolist())) if hasattr(sv, 'tolist') else dict(zip(self.master_features, sv)),
             "amnesty_info": {
                 "applied": bool(amnesty_boost > 0),
                 "boost": amnesty_boost,
